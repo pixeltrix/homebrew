@@ -3,8 +3,7 @@
 
 def homebrew_rubylib_path
   lib_path = "/../../Library/Homebrew"
-  # we resolve off of Dir.getwd as otherwise the symlink gets resolved!
-  brew_path = if not File.symlink? __FILE__ or File.exist? Dir.getwd+'/'+__FILE__+lib_path
+  brew_path = if not File.symlink? __FILE__ or File.exist? __FILE__+lib_path
     # standard 100% symlinked or non-symlinked installation
     __FILE__
   else
