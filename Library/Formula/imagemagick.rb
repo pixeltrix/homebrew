@@ -3,8 +3,8 @@ require 'formula'
 # some credit to http://github.com/maddox/magick-installer
 
 class Imagemagick <Formula
-  @url='http://image_magick.veidrodis.com/image_magick/ImageMagick-6.5.6-5.tar.gz'
-  @md5='668919a5a7912fb6778975bc55893004'
+  @url='http://image_magick.veidrodis.com/image_magick/ImageMagick-6.5.7-4.tar.gz'
+  @md5='357ba8516eeede4e6a418381e7d61587'
   @homepage='http://www.imagemagick.org'
 
   depends_on 'jpeg'
