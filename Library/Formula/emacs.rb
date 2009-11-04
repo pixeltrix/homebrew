@@ -1,4 +1,4 @@
-require 'brewkit'
+require 'formula'
 
 class Emacs <Formula
   head 'git://git.savannah.gnu.org/emacs.git'
@@ -15,7 +15,8 @@ class Emacs <Formula
 			  "--disable-debug",
 			  "--disable-dependency-tracking",
 			  "--without-x"
-    system "make; make install"
+    system "make"
+    system "make install"
   end
 end
 

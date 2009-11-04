@@ -1,4 +1,4 @@
-require 'brewkit'
+require 'formula'
 
 class Python <Formula
   url 'http://python.org/ftp/python/2.6.3/Python-2.6.3.tar.bz2'
@@ -24,12 +24,16 @@ class Python <Formula
     args = ["--prefix=#{prefix}"]
 
     if ARGV.include? '--framework'
-      args << "--with-framework-name=/Developer/SDKs/MacOSX#{MACOS_VERSION}.sdk"
+      args << "--enable-framework"
     end
     
     if ARGV.include? '--intel'
-      args << "--with-universal-archs=intel"
+      args << "--with-universal-archs=intel --enable-universalsdk=/"
     end
+    
+    # Speed up creation of libpython.a, backported from Unladen Swallow:
+    # http://code.google.com/p/unladen-swallow/source/detail?r=856
+    inreplace "Makefile.pre.in", "$(AR) cr", "$(AR) cqS"
     
     system "./configure", *args
     

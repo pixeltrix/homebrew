@@ -1,13 +1,19 @@
 #!/usr/bin/ruby
 require 'global'
-require 'formula'
-require 'keg'
+
 require 'brew.h'
+require 'extend/ENV'
+require 'fileutils'
+require 'formula'
+require 'hardware'
+require 'keg'
 
 show_summary_heading = false
 
 def text_for_keg_only_formula f
-  if f.keg_only?.kind_of? String
+  if f.keg_only? == :provided_by_osx
+    rationale = "This because the formula is already provided by OS X."
+  elsif f.keg_only?.kind_of? String
     rationale = "The formula provides the following rationale:\n\n#{f.keg_only?.chomp}"
   else
     rationale = "The formula didn't provide any rationale for this."
@@ -25,23 +31,25 @@ EOS
 end
 
 
-def ENV_prepend key, value, separator = ' '
-  if ENV[key] and not ENV[key].empty?
-    ENV[key] = value+separator+ENV[key]
-  else
-    ENV[key] = value
-  end
-end
-
-
 def install f
+  # we deliberately only do this when install is run, although it may be the wrong decision…
+  ENV.extend(HomebrewEnvExtension)
+  ENV.setup_build_environment
+  
   f.deps.each do |dep|
     dep = Formula.factory dep
     if dep.keg_only?
-      ENV_prepend 'LDFLAGS', "-L#{dep.lib}"
-      ENV_prepend 'CPPFLAGS', "-I#{dep.include}"
-      ENV_prepend 'PATH', "#{dep.bin}", ':'
-      ENV_prepend 'PKG_CONFIG_PATH', dep.lib+'pkgconfig', ':'
+      ENV.prepend 'LDFLAGS', "-L#{dep.lib}"
+      ENV.prepend 'CPPFLAGS', "-I#{dep.include}"
+      ENV.prepend 'PATH', "#{dep.bin}", ':'
+      ENV.prepend 'PKG_CONFIG_PATH', dep.lib+'pkgconfig', ':'
+    end
+  end
+
+  if ARGV.verbose?
+    ohai "Build Environment"
+    %w[PATH CFLAGS LDFLAGS CPPFLAGS MAKEFLAGS CC CXX MACOSX_DEPLOYMENT_TARGET].each do |env|
+      puts "#{env}: #{ENV[env]}" unless ENV[env].to_s.empty?
     end
   end
 
@@ -88,7 +96,7 @@ def install f
   rescue Exception => e
     opoo "The cleaning step did not complete successfully"
     puts "Still, the installation was successful, so we will link it into your prefix"
-    ohai e, e.inspect if ARGV.debug?
+    ohai e, e.backtrace if ARGV.debug?
     show_summary_heading = true
   end
 
@@ -114,11 +122,11 @@ def install f
   else
     begin
       Keg.new(f.prefix).link
-    rescue Exception
+    rescue Exception => e
       onoe "The linking step did not complete successfully"
       puts "The package built, but is not symlinked into #{HOMEBREW_PREFIX}"
       puts "You can try again using `brew link #{f.name}'"
-      ohai e, e.inspect if ARGV.debug?
+      ohai e, e.backtrace if ARGV.debug?
       show_summary_heading = true
     end
   end
@@ -129,9 +137,16 @@ def install f
   puts
 
 rescue Exception => e
-  #TODO propogate exception back to brew script
-  onoe e
-  puts e.backtrace
+  if ENV['HOMEBREW_ERROR_PIPE']
+    pipe = IO.new(ENV['HOMEBREW_ERROR_PIPE'].to_i, 'w')
+    Marshal.dump(e, pipe)
+    pipe.close
+    exit! 1
+  else
+    onoe e
+    puts e.backtrace
+    exit! 2
+  end
 end
 
 

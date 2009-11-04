@@ -1,4 +1,4 @@
-require 'brewkit'
+require 'formula'
 
 class Weechat <Formula
   @url='http://www.weechat.org/files/src/weechat-0.3.0.tar.bz2'
@@ -14,7 +14,6 @@ class Weechat <Formula
 
   def install
     #FIXME: Compiling perl module doesn't work
-    #FIXME: GnuTLS support isn't detected
     #NOTE: -DPREFIX has to be specified because weechat devs enjoy being non-standard
     system "cmake", "-DPREFIX=#{prefix}", 
                     "-DDISABLE_PERL=ON",
