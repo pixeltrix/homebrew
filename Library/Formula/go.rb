@@ -1,8 +1,10 @@
 require 'formula'
 
 class Go <Formula
-  head 'https://go.googlecode.com/hg/'
+  head 'https://go.googlecode.com/hg/', :revision => 'release'
   homepage 'http://golang.org'
+
+  aka 'google-go'
 
   skip_clean 'bin'
 
@@ -15,6 +17,7 @@ class Go <Formula
   end
 
   def install
+    ENV.j1 # http://github.com/mxcl/homebrew/issues/#issue/237
     prefix.install cruft<<'misc'
     Dir.chdir prefix
     FileUtils.mkdir %w[pkg bin lib]

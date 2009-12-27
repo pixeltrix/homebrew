@@ -88,6 +88,7 @@ end
 def safe_system cmd, *args
   puts "#{cmd} #{args*' '}" if ARGV.verbose?
   fork do
+    args.collect!{|arg| arg.to_s}
     exec(cmd, *args) rescue nil
     exit! 1 # never gets here unless exec failed
   end
@@ -100,11 +101,19 @@ def curl *args
 end
 
 def puts_columns items, cols = 4
+  return if items.empty?
+
   if $stdout.tty?
     items = items.join("\n") if items.is_a?(Array)
     items.concat("\n") unless items.empty?
-    width=`/bin/stty size`.chomp.split(" ").last
-    IO.popen("/usr/bin/pr -#{cols} -t", "w"){|io| io.write(items) }
+
+    # determine the best width to display for different console sizes
+    console_width = `/bin/stty size`.chomp.split(" ").last
+    longest = items.sort_by { |item| item.length }.last
+    optimal_col_width = (console_width.to_f / (longest.length + 2).to_f).floor
+    cols = optimal_col_width > 1 ? optimal_col_width : 1
+
+    IO.popen("/usr/bin/pr -#{cols} -t -w#{console_width}", "w"){|io| io.write(items) }
   else
     puts *items
   end
