@@ -13,7 +13,7 @@ _brew_to_completion()
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     
     # We only complete unabbreviated commands...
-    actions="configure create edit generate homepage info install list link options prune remove search unlink update uses"
+    actions="cleanup configure create edit generate homepage info install list link options prune remove search unlink update uses"
     
     # Subcommand list
     if [[ ( ${COMP_CWORD} -eq 1 ) && ( ${COMP_WORDS[0]} == brew )  ]] ; then
@@ -21,8 +21,7 @@ _brew_to_completion()
         return 0
     # Subcommands
     else
-        brew_base=`which brew`
-        brew_base=`dirname ${brew_base}`/..
+        brew_base=`brew --repository`
         
         case ${prev} in
             # Commands that take a formula...
@@ -33,7 +32,7 @@ _brew_to_completion()
             ;;
 
             # Commands that take an existing brew...
-            abv|info|list|link|ls|ln|rm|remove|uninstall|unlink)
+            abv|cleanup|info|list|link|ls|ln|rm|remove|uninstall|unlink)
                 cellar_contents=`ls ${brew_base}/Cellar/`
                 COMPREPLY=( $(compgen -W "${cellar_contents}" -- ${cur}) )
                 return 0
