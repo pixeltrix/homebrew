@@ -13,9 +13,6 @@ $:.unshift(HOMEBREW_LIBRARY_PATH)
 require 'global'
 
 case ARGV.first
-when '--cache'
-  puts HOMEBREW_CACHE
-  exit 0
 when '-h', '--help', '--usage', '-?', 'help', nil
   puts ARGV.usage
   exit 0
@@ -73,10 +70,22 @@ begin
   require 'brew.h'
 
   case arg = ARGV.shift
+  when '--cache'
+    if ARGV.named.empty?
+      puts HOMEBREW_CACHE
+    else
+      puts *ARGV.formulae.collect {|f| f.cached_download rescue '(built from source control)'}
+    end
   when '--prefix'
-    puts HOMEBREW_PREFIX
+    if ARGV.named.empty?
+      puts HOMEBREW_PREFIX
+    else
+      puts *ARGV.formulae.collect {|f| f.prefix}
+    end
   when '--repository'
     puts HOMEBREW_REPOSITORY
+  when '--cellar'
+    puts HOMEBREW_CELLAR
   when '--config'
     dump_config
 
@@ -211,8 +220,13 @@ begin
     if ARGV.named.empty?
       require 'formula'
       HOMEBREW_CELLAR.children.each do |rack|
-        cleanup(rack.basename.to_s) if rack.directory?
+        begin
+          cleanup(rack.basename.to_s) if rack.directory?
+        rescue FormulaUnavailableError => e
+          opoo "Formula not found for #{e.name}"
+        end
       end
+      prune # seems like a good time to do some additional cleanup
     else
       ARGV.named.each { |name| cleanup name}
     end
@@ -314,13 +328,29 @@ begin
         puts "#{name} depends on #{our_deps.join(", ")}"
       end
     end
-
-  when 'branch', 'checkout', 'pull', 'push', 'reset'
-    onoe "Unknown command: #{arg} (did you mean 'git #{arg}'?)"
-
+    
   when 'cat'
     Dir.chdir HOMEBREW_REPOSITORY
     exec "cat", ARGV.formulae.first.path, *ARGV.options
+
+  when 'outdated'
+    require 'formula'
+    HOMEBREW_CELLAR.subdirs.each do |keg|
+      if keg.subdirs.length > 0
+        name = keg.basename('.rb').to_s
+        if (not (f = Formula.factory(name)).installed? rescue nil)
+          if $stdout.tty? and not ARGV.flag? '--quiet'
+            versions = keg.cd{ Dir['*'] }.join(', ')
+            puts "#{name} (#{versions} < #{f.version})"
+          else
+            puts name
+          end
+        end
+      end
+    end
+
+  when 'branch', 'checkout', 'pull', 'push', 'rebase', 'reset'
+    onoe "Unknown command: #{arg} (did you mean 'git #{arg}'?)"
 
   else
     onoe "Unknown command: #{arg}"
